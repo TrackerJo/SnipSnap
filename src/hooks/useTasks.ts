@@ -17,6 +17,11 @@ export interface Todo {
     text: string;
     completed: boolean;
     imageUrl?: string;
+    completedAt?: Date;
+    difficulty?: 'easy' | 'medium' | 'hard';
+    estimatedMinutes?: number;
+    urgency?: number;
+    importance?: number;
 }
 
 export const useTasks = () => {
@@ -37,7 +42,12 @@ export const useTasks = () => {
                         id: task.id,
                         text: task.text,
                         completed: task.completed,
-                        imageUrl: task.imageUrl
+                        imageUrl: task.imageUrl,
+                        completedAt: task.completedAt instanceof Date ? task.completedAt : undefined,
+                        difficulty: task.difficulty,
+                        estimatedMinutes: task.estimatedMinutes,
+                        urgency: task.urgency,
+                        importance: task.importance,
                     })));
                     setError(null);
                 } catch (err) {
@@ -58,11 +68,17 @@ export const useTasks = () => {
     /**
      * Add a new task
      */
-    const addTodo = async (text: string): Promise<void> => {
+    const addTodo = async (text: string, metadata?: {
+        difficulty?: 'easy' | 'medium' | 'hard';
+        estimatedMinutes?: number;
+        urgency?: number;
+        importance?: number;
+    }): Promise<void> => {
         const newTodo: Todo = {
             id: Date.now().toString(),
             text,
             completed: false,
+            ...metadata,
         };
 
         try {

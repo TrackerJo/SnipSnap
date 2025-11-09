@@ -25,6 +25,7 @@ export function CameraDialog({ open, onOpenChange, onCapture, onUpdateTask, task
     updatedTask?: string;
     isIncremental?: boolean;
     isFullyComplete?: boolean;
+    caption?: string;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -261,6 +262,11 @@ export function CameraDialog({ open, onOpenChange, onCapture, onUpdateTask, task
                   <p className="text-xs text-green-600">
                     {verificationResult.reason}
                   </p>
+                  {verificationResult.caption && (
+                    <p className="text-sm text-green-700 mt-2 font-medium italic border-t border-green-200 pt-2">
+                      "{verificationResult.caption}"
+                    </p>
+                  )}
                   {verificationResult.isIncremental && !verificationResult.isFullyComplete && verificationResult.updatedTask && (
                     <p className="text-xs text-green-700 mt-2 font-semibold">
                       Updated task: "{verificationResult.updatedTask}"

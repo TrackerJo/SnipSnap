@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { motion } from "motion/react";
-import { Camera, Scissors, Check } from "lucide-react";
+import { Camera, Scissors, Check, Clock, Zap, Star } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 
@@ -9,12 +10,33 @@ interface TodoItemProps {
     text: string;
     completed: boolean;
     imageUrl?: string;
+    difficulty?: 'easy' | 'medium' | 'hard';
+    estimatedMinutes?: number;
+    urgency?: number;
+    importance?: number;
   };
   onComplete: (id: string) => void;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
-export function TodoItem({ todo, onComplete, onDelete }: TodoItemProps) {
+export function TodoItem({ todo, onComplete }: TodoItemProps) {
+  // If task is already completed on mount, skip animation
+  const [animationComplete, setAnimationComplete] = useState(todo.completed);
+
+  // Debug: Log todo metadata
+  console.log('TodoItem metadata:', {
+    text: todo.text,
+    difficulty: todo.difficulty,
+    estimatedMinutes: todo.estimatedMinutes,
+    urgency: todo.urgency,
+    importance: todo.importance
+  });
+
+  // Hide completed tasks (either already completed or after animation)
+  if (todo.completed && animationComplete) {
+    return null;
+  }
+
   if (todo.completed) {
     const numPieces = 5;
     const pieceWidth = 100 / numPieces;
@@ -38,7 +60,7 @@ export function TodoItem({ todo, onComplete, onDelete }: TodoItemProps) {
               delay: 0.2 + i * 0.05,
               ease: [0.4, 0.0, 0.2, 1]
             }}
-            onAnimationComplete={i === numPieces - 1 ? () => onDelete(todo.id) : undefined}
+            onAnimationComplete={i === numPieces - 1 ? () => setAnimationComplete(true) : undefined}
             className="absolute top-0 bottom-0 overflow-hidden"
             style={{
               left: `${i * pieceWidth}%`,
@@ -214,7 +236,71 @@ export function TodoItem({ todo, onComplete, onDelete }: TodoItemProps) {
             <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#A7C7E7' }}>
               <Scissors className="h-5 w-5 text-white" />
             </div>
-            <span className="text-foreground">{todo.text}</span>
+            <div className="flex-1">
+              <span className="text-foreground">{todo.text}</span>
+
+              {/* AI Metadata Badges */}
+              {(todo.difficulty || todo.estimatedMinutes || todo.urgency || todo.importance) && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {/* Difficulty Badge */}
+                  {todo.difficulty && (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+                      style={{
+                        backgroundColor: todo.difficulty === 'easy' ? '#DCFCE7' : todo.difficulty === 'medium' ? '#FEF3C7' : '#FEE2E2',
+                        color: todo.difficulty === 'easy' ? '#166534' : todo.difficulty === 'medium' ? '#92400E' : '#991B1B'
+                      }}
+                    >
+                      {todo.difficulty.toUpperCase()}
+                    </span>
+                  )}
+
+                  {/* Time Estimate Badge */}
+                  {todo.estimatedMinutes && (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+                      style={{
+                        backgroundColor: '#E0E7FF',
+                        color: '#3730A3'
+                      }}
+                    >
+                      <Clock className="h-3 w-3" />
+                      {todo.estimatedMinutes < 60
+                        ? `${todo.estimatedMinutes}m`
+                        : `${Math.round(todo.estimatedMinutes / 60 * 10) / 10}h`}
+                    </span>
+                  )}
+
+                  {/* Urgency Badge */}
+                  {todo.urgency !== undefined && todo.urgency >= 7 && (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+                      style={{
+                        backgroundColor: '#FEF3C7',
+                        color: '#92400E'
+                      }}
+                    >
+                      <Zap className="h-3 w-3" />
+                      URGENT {todo.urgency}/10
+                    </span>
+                  )}
+
+                  {/* Importance Badge */}
+                  {todo.importance !== undefined && todo.importance >= 7 && (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+                      style={{
+                        backgroundColor: '#FCE7F3',
+                        color: '#831843'
+                      }}
+                    >
+                      <Star className="h-3 w-3" />
+                      HIGH PRIORITY {todo.importance}/10
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <Button

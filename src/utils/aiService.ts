@@ -231,8 +231,14 @@ Respond in JSON format with:
   "confidence": a number between 0 and 1,
   "isIncremental": true or false (is this a countable/incremental task?),
   "isFullyComplete": true or false (is the ENTIRE task done, or just partial?),
-  "updatedTask": "The task with reduced count" (ONLY for incremental tasks that are not fully complete, otherwise omit this field)
+  "updatedTask": "The task with reduced count" (ONLY for incremental tasks that are not fully complete, otherwise omit this field),
+  "caption": "A short, motivational 1-sentence caption celebrating what they accomplished (be specific and encouraging!)"
 }
+
+Caption examples:
+- For gym: "Crushed that workout! Your dedication is inspiring 💪"
+- For reading: "Another chapter conquered! Knowledge is power 📚"
+- For water: "Hydration hero! Keep up the healthy habits 💧"
 
 Be reasonable and lenient - if the image shows any relevant evidence of progress, verify it. Only reject if clearly unrelated.`;
 
@@ -261,6 +267,7 @@ Be reasonable and lenient - if the image shows any relevant evidence of progress
             updatedTask: parsed.updatedTask,
             isIncremental: parsed.isIncremental ?? false,
             isFullyComplete: parsed.isFullyComplete ?? true,
+            caption: parsed.caption || 'Great job completing this task!',
           };
         }
       } catch (parseError) {
@@ -273,6 +280,7 @@ Be reasonable and lenient - if the image shows any relevant evidence of progress
         reason: 'Image uploaded successfully',
         confidence: 0.6,
         isFullyComplete: true,
+        caption: 'Task completed successfully!',
       };
     } catch (error) {
       console.error('Gemini vision API error:', error);

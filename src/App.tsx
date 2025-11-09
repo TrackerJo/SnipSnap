@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Plus, Scissors, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Scissors, Sparkles } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { TodoItem } from "./components/TodoItem";
 import { AddTodoDialog } from "./components/AddTodoDialog";
@@ -16,7 +16,7 @@ export default function App() {
     addTodo,
     completeTodo,
     updateTodoText,
-    deleteTodo
+    // deleteTodo - not needed since tasks are just hidden after animation
   } = useTasks();
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -24,9 +24,14 @@ export default function App() {
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [selectedTodoId, setSelectedTodoId] = useState<string | null>(null);
 
-  const handleAddTodo = async (text: string) => {
+  const handleAddTodo = async (text: string, metadata?: {
+    difficulty?: 'easy' | 'medium' | 'hard';
+    estimatedMinutes?: number;
+    urgency?: number;
+    importance?: number;
+  }) => {
     try {
-      await addTodo(text);
+      await addTodo(text, metadata);
     } catch (error) {
       console.error('Failed to add todo:', error);
     }
@@ -64,13 +69,14 @@ export default function App() {
     }
   };
 
-  const handleDeleteTodo = async (id: string) => {
-    try {
-      await deleteTodo(id);
-    } catch (error) {
-      console.error('Failed to delete todo:', error);
-    }
-  };
+  // Tasks are no longer deleted, just hidden after animation
+  // const handleDeleteTodo = async (id: string) => {
+  //   try {
+  //     await deleteTodo(id);
+  //   } catch (error) {
+  //     console.error('Failed to delete todo:', error);
+  //   }
+  // };
 
   const selectedTodo = todos.find(t => t.id === selectedTodoId);
   const activeTodos = todos.filter(t => !t.completed);
@@ -186,7 +192,7 @@ export default function App() {
           </Button>
         </motion.div>
 
-        {/* Todo List - Only show active tasks */}
+        {/* Todo List - Show all tasks (active tasks show normally, completed tasks show animation) */}
         <div className="space-y-4">
           {activeTodos.length === 0 && completedTodos.length === 0 ? (
             <motion.div
@@ -200,7 +206,7 @@ export default function App() {
                 Create your first task and start snipping away! ✂️
               </p>
             </motion.div>
-          ) : activeTodos.length === 0 ? (
+          ) : activeTodos.length === 0 && completedTodos.length > 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -213,12 +219,11 @@ export default function App() {
               </p>
             </motion.div>
           ) : (
-            activeTodos.map((todo) => (
+            todos.map((todo) => (
               <TodoItem
                 key={todo.id}
                 todo={todo}
                 onComplete={handleCompleteTodo}
-                onDelete={handleDeleteTodo}
               />
             ))
           )}

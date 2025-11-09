@@ -13,7 +13,7 @@ export default defineConfig({
       "@": resolve(__dirname, "./src"),
     },
   },
-  base: '/',
+  base: '/SnipSnap/',
   build: {
     outDir,
     emptyOutDir: true,

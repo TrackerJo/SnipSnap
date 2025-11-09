@@ -11,25 +11,67 @@ import { Alert, AlertDescription } from "./ui/alert";
 interface AddTodoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (text: string) => void;
+  onAdd: (text: string, metadata?: {
+    difficulty?: 'easy' | 'medium' | 'hard';
+    estimatedMinutes?: number;
+    urgency?: number;
+    importance?: number;
+  }) => void;
 }
 
 export function AddTodoDialog({ open, onOpenChange, onAdd }: AddTodoDialogProps) {
   const [todoText, setTodoText] = useState("");
   const [isAssessing, setIsAssessing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  const [aiMetadata, setAiMetadata] = useState<{
+    difficulty?: 'easy' | 'medium' | 'hard';
+    estimatedMinutes?: number;
+    urgency?: number;
+    importance?: number;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalText = aiSuggestion || todoText.trim();
-    if (finalText) {
-      onAdd(finalText);
-      setTodoText("");
-      setAiSuggestion(null);
-      setError(null);
-      onOpenChange(false);
+    if (!finalText) return;
+
+    // If we don't have metadata yet, get it from AI before submitting
+    if (!aiMetadata) {
+      const provider = getActiveProvider();
+      if (provider && hasAPIKey(provider)) {
+        setIsSubmitting(true);
+        try {
+          const result = await assessAndRewriteTask(finalText, provider);
+          const metadata = {
+            difficulty: result.difficulty,
+            estimatedMinutes: result.estimatedMinutes,
+            urgency: result.urgency,
+            importance: result.importance,
+          };
+          onAdd(result.rewrittenTask || finalText, metadata);
+        } catch (err) {
+          console.error('Failed to get AI metadata:', err);
+          // Still add the task even if AI fails
+          onAdd(finalText);
+        } finally {
+          setIsSubmitting(false);
+        }
+      } else {
+        // No API key, just add without metadata
+        onAdd(finalText);
+      }
+    } else {
+      // We already have metadata
+      onAdd(finalText, aiMetadata);
     }
+
+    setTodoText("");
+    setAiSuggestion(null);
+    setAiMetadata(null);
+    setError(null);
+    onOpenChange(false);
   };
 
   const handleAIRewrite = async () => {
@@ -47,6 +89,12 @@ export function AddTodoDialog({ open, onOpenChange, onAdd }: AddTodoDialogProps)
     try {
       const result = await assessAndRewriteTask(todoText.trim(), provider);
       setAiSuggestion(result.rewrittenTask);
+      setAiMetadata({
+        difficulty: result.difficulty,
+        estimatedMinutes: result.estimatedMinutes,
+        urgency: result.urgency,
+        importance: result.importance,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to assess task");
       setAiSuggestion(null);
@@ -223,21 +271,21 @@ export function AddTodoDialog({ open, onOpenChange, onAdd }: AddTodoDialogProps)
             </Button>
             <Button
               type="submit"
-              disabled={!todoText.trim()}
+              disabled={!todoText.trim() || isSubmitting}
               className="flex-1"
               style={{
                 backgroundColor: '#A7C7E7',
                 color: '#1F2937'
               }}
               onMouseEnter={(e) => {
-                if (!todoText.trim()) return;
+                if (!todoText.trim() || isSubmitting) return;
                 e.currentTarget.style.backgroundColor = '#7FB2E5';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = '#A7C7E7';
               }}
             >
-              Add Task
+              {isSubmitting ? 'Adding...' : 'Add Task'}
             </Button>
           </div>
         </form>

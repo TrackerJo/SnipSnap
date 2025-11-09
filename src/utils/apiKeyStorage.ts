@@ -45,7 +45,7 @@ export const getAPIKeys = (): APIKeys => {
 
         // const obfuscated = JSON.parse(stored);
         const keys: APIKeys = {
-            gemini: "AIzaSyDU4ryiEj8-l7Ijv2DkoWQq_Om_0MYq8jU"
+            gemini: import.meta.env.VITE_GEMINI_API_KEY || undefined,
         };
 
         // if (obfuscated.gemini) {

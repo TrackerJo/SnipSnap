@@ -51,6 +51,11 @@ export interface Task {
     imageUrl?: string;
     createdAt: Date | Timestamp;
     updatedAt?: Date | Timestamp;
+    completedAt?: Date | Timestamp;
+    difficulty?: 'easy' | 'medium' | 'hard';
+    estimatedMinutes?: number;
+    urgency?: number;
+    importance?: number;
 }
 
 // Internal Firestore task structure
@@ -60,6 +65,11 @@ interface FirestoreTask {
     imageUrl?: string;
     createdAt: Timestamp | ReturnType<typeof serverTimestamp>;
     updatedAt?: Timestamp | ReturnType<typeof serverTimestamp>;
+    completedAt?: Timestamp | ReturnType<typeof serverTimestamp>;
+    difficulty?: 'easy' | 'medium' | 'hard';
+    estimatedMinutes?: number;
+    urgency?: number;
+    importance?: number;
 }
 
 /**
@@ -124,7 +134,16 @@ const convertToTask = (id: string, firestoreTask: FirestoreTask): Task => {
             ? (firestoreTask.updatedAt instanceof Date
                 ? firestoreTask.updatedAt
                 : (firestoreTask.updatedAt as Timestamp).toDate())
-            : undefined
+            : undefined,
+        completedAt: firestoreTask.completedAt
+            ? (firestoreTask.completedAt instanceof Date
+                ? firestoreTask.completedAt
+                : (firestoreTask.completedAt as Timestamp).toDate())
+            : undefined,
+        difficulty: firestoreTask.difficulty,
+        estimatedMinutes: firestoreTask.estimatedMinutes,
+        urgency: firestoreTask.urgency,
+        importance: firestoreTask.importance,
     };
 };
 
@@ -142,6 +161,23 @@ export const saveTask = async (task: Omit<Task, 'createdAt' | 'updatedAt'>): Pro
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
     };
+
+    // Only add optional fields if they exist (Firestore doesn't support undefined)
+    if (task.imageUrl) {
+        firestoreTask.imageUrl = task.imageUrl;
+    }
+    if (task.difficulty) {
+        firestoreTask.difficulty = task.difficulty;
+    }
+    if (task.estimatedMinutes !== undefined) {
+        firestoreTask.estimatedMinutes = task.estimatedMinutes;
+    }
+    if (task.urgency !== undefined) {
+        firestoreTask.urgency = task.urgency;
+    }
+    if (task.importance !== undefined) {
+        firestoreTask.importance = task.importance;
+    }
 
     try {
         await setDoc(taskRef, firestoreTask);
