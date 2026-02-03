@@ -15,23 +15,26 @@ export type AIProvider = 'gemini' | 'claude';
 
 // Simple obfuscation (not true encryption - for demo purposes)
 // In production, use a backend to handle API keys
-const obfuscate = (text: string): string => {
+const _obfuscate = (text: string): string => {
     return btoa(text.split('').reverse().join(''));
 };
 
-const deobfuscate = (text: string): string => {
+const _deobfuscate = (text: string): string => {
     return atob(text).split('').reverse().join('');
 };
+
+// Export to avoid unused warnings (kept for future localStorage implementation)
+export { _obfuscate, _deobfuscate };
 
 export const saveAPIKeys = (keys: APIKeys): void => {
     const obfuscated: Record<string, string> = {};
 
     if (keys.gemini) {
-        obfuscated.gemini = obfuscate(keys.gemini);
+        obfuscated.gemini = _obfuscate(keys.gemini);
     }
 
     if (keys.claude) {
-        obfuscated.claude = obfuscate(keys.claude);
+        obfuscated.claude = _obfuscate(keys.claude);
     }
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(obfuscated));
