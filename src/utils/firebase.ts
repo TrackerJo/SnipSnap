@@ -122,24 +122,26 @@ const getUserTasksCollection = (uid: string) => {
  * Convert Firestore task to app Task format
  */
 const convertToTask = (id: string, firestoreTask: FirestoreTask): Task => {
+    // Helper to safely convert Firestore timestamp to Date
+    const toDate = (timestamp: Timestamp | ReturnType<typeof serverTimestamp> | undefined | null): Date | undefined => {
+        if (!timestamp) return undefined;
+        if (timestamp instanceof Date) return timestamp;
+        // Check if it's a Firestore Timestamp with toDate method
+        if (typeof (timestamp as Timestamp).toDate === 'function') {
+            return (timestamp as Timestamp).toDate();
+        }
+        // Fallback for server timestamp sentinel or other cases
+        return undefined;
+    };
+
     return {
         id,
         text: firestoreTask.text,
         completed: firestoreTask.completed,
         imageUrl: firestoreTask.imageUrl,
-        createdAt: firestoreTask.createdAt instanceof Date
-            ? firestoreTask.createdAt
-            : (firestoreTask.createdAt as Timestamp).toDate(),
-        updatedAt: firestoreTask.updatedAt
-            ? (firestoreTask.updatedAt instanceof Date
-                ? firestoreTask.updatedAt
-                : (firestoreTask.updatedAt as Timestamp).toDate())
-            : undefined,
-        completedAt: firestoreTask.completedAt
-            ? (firestoreTask.completedAt instanceof Date
-                ? firestoreTask.completedAt
-                : (firestoreTask.completedAt as Timestamp).toDate())
-            : undefined,
+        createdAt: toDate(firestoreTask.createdAt) || new Date(),
+        updatedAt: toDate(firestoreTask.updatedAt),
+        completedAt: toDate(firestoreTask.completedAt),
         difficulty: firestoreTask.difficulty,
         estimatedMinutes: firestoreTask.estimatedMinutes,
         urgency: firestoreTask.urgency,
@@ -184,30 +186,53 @@ export const saveTask = async (task: Omit<Task, 'createdAt' | 'updatedAt'>): Pro
         console.log('✅ Task saved:', task.id);
     } catch (error) {
         console.error('❌ Error saving task:', error);
-        throw new Error('Failed to save task');
+        // Rethrow with actual error details
+        throw error;
     }
-};/**
+};
+
+/**
  * Load all tasks for the current user
  */
 export const loadTasks = async (): Promise<Task[]> => {
     const user = await ensureAuthenticated();
     const tasksCollection = getUserTasksCollection(user.uid);
-    const q = query(tasksCollection, orderBy('createdAt', 'desc'));
 
     try {
-        const querySnapshot = await getDocs(q);
+        // Try with orderBy first, fall back to simple query if index doesn't exist
+        let querySnapshot;
+        try {
+            const q = query(tasksCollection, orderBy('createdAt', 'desc'));
+            querySnapshot = await getDocs(q);
+        } catch (indexError) {
+            console.warn('⚠️ orderBy query failed (index may not exist), using simple query:', indexError);
+            // Fall back to simple query without ordering
+            querySnapshot = await getDocs(tasksCollection);
+        }
+
         const tasks: Task[] = [];
 
-        querySnapshot.forEach((doc) => {
-            const data = doc.data() as FirestoreTask;
-            tasks.push(convertToTask(doc.id, data));
+        querySnapshot.forEach((docSnapshot) => {
+            try {
+                const data = docSnapshot.data() as FirestoreTask;
+                tasks.push(convertToTask(docSnapshot.id, data));
+            } catch (conversionError) {
+                console.warn('⚠️ Skipping task with conversion error:', docSnapshot.id, conversionError);
+            }
+        });
+
+        // Sort by createdAt client-side if we couldn't use orderBy
+        tasks.sort((a, b) => {
+            const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : 0;
+            const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : 0;
+            return dateB - dateA;
         });
 
         console.log('✅ Tasks loaded:', tasks.length);
         return tasks;
     } catch (error) {
         console.error('❌ Error loading tasks:', error);
-        throw new Error('Failed to load tasks');
+        throw error;
     }
 };
 

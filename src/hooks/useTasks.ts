@@ -30,32 +30,44 @@ export const useTasks = () => {
     const [error, setError] = useState<string | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+    // Function to load tasks - can be called for retry
+    const fetchTasks = async () => {
+        try {
+            setLoading(true);
+            const tasks = await loadTasks();
+            // Load all tasks including completed ones
+            setTodos(tasks.map(task => ({
+                id: task.id,
+                text: task.text,
+                completed: task.completed,
+                imageUrl: task.imageUrl,
+                completedAt: task.completedAt instanceof Date ? task.completedAt : undefined,
+                difficulty: task.difficulty,
+                estimatedMinutes: task.estimatedMinutes,
+                urgency: task.urgency,
+                importance: task.importance,
+            })));
+            setError(null);
+        } catch (err) {
+            console.error('Error loading tasks:', err);
+            setError('Failed to load tasks');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Clear error and retry loading
+    const clearError = () => {
+        setError(null);
+        setTodos([]);
+    };
+
     // Load tasks when user authentication state changes
     useEffect(() => {
         const unsubscribe = onAuthChange(async (user) => {
             if (user) {
                 setIsAuthenticated(true);
-                try {
-                    const tasks = await loadTasks();
-                    // Load all tasks including completed ones
-                    setTodos(tasks.map(task => ({
-                        id: task.id,
-                        text: task.text,
-                        completed: task.completed,
-                        imageUrl: task.imageUrl,
-                        completedAt: task.completedAt instanceof Date ? task.completedAt : undefined,
-                        difficulty: task.difficulty,
-                        estimatedMinutes: task.estimatedMinutes,
-                        urgency: task.urgency,
-                        importance: task.importance,
-                    })));
-                    setError(null);
-                } catch (err) {
-                    console.error('Error loading tasks:', err);
-                    setError('Failed to load tasks');
-                } finally {
-                    setLoading(false);
-                }
+                await fetchTasks();
             } else {
                 setIsAuthenticated(false);
                 setLoading(false);
@@ -86,13 +98,15 @@ export const useTasks = () => {
             setTodos(prev => [newTodo, ...prev]);
 
             // Save to Firebase
+            console.log('🔵 Saving task to Firebase:', newTodo.id);
             await saveTask(newTodo);
-            setError(null);
+            console.log('✅ Task saved successfully:', newTodo.id);
         } catch (err) {
-            console.error('Error adding task:', err);
+            console.error('❌ Error adding task:', err);
             // Revert optimistic update on error
             setTodos(prev => prev.filter(t => t.id !== newTodo.id));
-            setError('Failed to add task');
+            // Show error to user via alert (temporary)
+            alert(`Failed to save task: ${err instanceof Error ? err.message : 'Unknown error'}`);
             throw err;
         }
     };
@@ -184,5 +198,7 @@ export const useTasks = () => {
         completeTodo,
         updateTodoText,
         deleteTodo,
+        clearError,
+        refetch: fetchTasks,
     };
 };

@@ -16,6 +16,8 @@ export default function App() {
     addTodo,
     completeTodo,
     updateTodoText,
+    clearError,
+    refetch,
     // deleteTodo - not needed since tasks are just hidden after animation
   } = useTasks();
 
@@ -104,7 +106,10 @@ export default function App() {
           <div className="mb-4 text-red-500">⚠️</div>
           <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
           <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()}>Reload App</Button>
+          <div className="flex gap-2 justify-center">
+            <Button onClick={() => refetch()}>Retry</Button>
+            <Button variant="outline" onClick={() => clearError()}>Start Fresh</Button>
+          </div>
         </div>
       </div>
     );

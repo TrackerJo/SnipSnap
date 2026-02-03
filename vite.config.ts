@@ -8,6 +8,7 @@ const outDir = resolve(__dirname, 'dist')
 export default defineConfig({
   plugins: [react()],
   root,
+  envDir: resolve(__dirname),  // Look for .env in project root, not in src/
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),

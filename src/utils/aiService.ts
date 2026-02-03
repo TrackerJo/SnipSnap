@@ -3,7 +3,7 @@
  * Supports both Gemini and Claude APIs
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 // import Anthropic from '@anthropic-ai/sdk';
 import { getAPIKeys, type AIProvider } from './apiKeyStorage';
 
@@ -29,8 +29,7 @@ export async function assessTaskWithGemini(taskText: string): Promise<TaskAssess
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(keys.gemini);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+    const client = new GoogleGenAI({ apiKey: keys.gemini });
 
     const prompt = `You are a productivity assistant. A user has entered the following task:
 
@@ -57,9 +56,11 @@ Examples:
 - "Go to gym" → difficulty: medium, estimatedMinutes: 90, urgency: 5, importance: 8
 - "Submit tax returns" → difficulty: hard, estimatedMinutes: 180, urgency: 10, importance: 10`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text().trim();
+    const response = await client.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    const text = response.text?.trim() || '';
 
     // Parse JSON response
     try {
@@ -200,9 +201,7 @@ export async function verifyTaskCompletion(
     }
 
     try {
-      const genAI = new GoogleGenerativeAI(keys.gemini);
-      // Use Gemini Pro Vision for image analysis
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+      const client = new GoogleGenAI({ apiKey: keys.gemini });
 
       // Remove data URL prefix if present
       const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
@@ -242,18 +241,25 @@ Caption examples:
 
 Be reasonable and lenient - if the image shows any relevant evidence of progress, verify it. Only reject if clearly unrelated.`;
 
-      const result = await model.generateContent([
-        prompt,
-        {
-          inlineData: {
-            mimeType: 'image/jpeg',
-            data: base64Data,
+      const response = await client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType: 'image/jpeg',
+                  data: base64Data,
+                },
+              },
+            ],
           },
-        },
-      ]);
+        ],
+      });
 
-      const response = await result.response;
-      const text = response.text();
+      const text = response.text || '';
 
       // Parse the JSON response
       try {
